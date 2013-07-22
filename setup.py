@@ -19,7 +19,8 @@ setup(
     url='https://github.com/mrj0/chimney/',
     license='BSD',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 1 - Planning',
     ],
     packages=['chimney'],
+    install_requires=['six>=1.3'],
 )
