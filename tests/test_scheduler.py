@@ -1,6 +1,14 @@
+from concurrent.futures import _base
+from mock import Mock
 from nose.tools import eq_
-from chimney.scheduler import TaskGraph
+from chimney.scheduler import TaskGraph, Runner
 from chimney.compilers import coffee, uglify
+
+
+class MockExecutor(_base.Executor):
+    def submit(self, runner, *args, **kwargs):
+        runner.task()
+        runner.future.set_result('finished')
 
 
 def test_graph_sort():
@@ -18,3 +26,30 @@ def test_graph_sort():
     # ignore the coffee files
     run_plan = [s for s in graph.toposort() if not s.endswith('.coffee')]
     eq_(run_plan, ['other.js', 'combined.js', 'combined.min.js'])
+
+
+def test_runner():
+    """
+    verify that runners depending on other runners works as expected
+    """
+    executor = MockExecutor()
+    runner_a = Runner(Mock())
+    runner_b = Runner(Mock())
+    runner_c = Runner(Mock())
+
+    runner_b.waiting_for.append(runner_a)
+    runner_c.waiting_for.append(runner_a)
+    runner_c.waiting_for.append(runner_b)
+
+    runner_c.schedule(executor)
+    assert not runner_c.future.done(), 'c should not have run yet'
+
+    runner_b.schedule(executor)
+    assert not runner_b.future.done(), 'b should not have run yet'
+
+    runner_a.schedule(executor)
+    assert runner_a.future.done(), 'a should have run'
+    runner_b.schedule(executor)
+    assert runner_b.future.done(), 'b should have run'
+    runner_c.schedule(executor)
+    assert runner_c.future.done(), 'c should have run'
