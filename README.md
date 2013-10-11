@@ -25,7 +25,6 @@ from chimney.compilers import Compiler
 class coffee(Compiler):
     def run(self):
         # perform compile
-        return results
 ```
 
 Targets
@@ -56,17 +55,6 @@ easy with chimney, simply add another task to the above definition:
 chimney.make(
     coffee('smoke.js', ['wood.coffee', 'fire.coffee']),
     uglify('smoke.min.js', 'smoke.js'),
-)
-```
-
-Of course, this is just written in Python so the list of files can be
-generated in any way you wish. Or the compiler commands also accept
-filename globs, too. This will find and compile all coffeescript files
-to ``site.js``.
-
-```python
-chimney.make(
-    coffee('site.js', '**/*.coffee'),
 )
 ```
 

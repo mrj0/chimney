@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from collections import OrderedDict
 try:
     from functools import reduce
@@ -8,6 +7,7 @@ except ImportError:
 
 class Digraph(OrderedDict):
     def __init__(self, roots=None):
+        super(Digraph, self).__init__()
         if roots:
             map(self.arc, roots)
 
@@ -20,7 +20,9 @@ class Digraph(OrderedDict):
         if key not in self:
             self[key] = set()
 
+        print key, 'depends_on', depends_on
         self[key] = self[key].union(depends_on)
+        print 'now', key, 'depends_on', self[key]
         for value in depends_on:
             # ensure there's a key for this dependency
             if not value in self:

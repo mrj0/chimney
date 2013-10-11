@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import codecs
-from distutils.core import setup
+from setuptools import setup
 import os
 
 
@@ -22,5 +22,5 @@ setup(
         'Development Status :: 1 - Planning',
     ],
     packages=['chimney'],
-    install_requires=['six>=1.3'],
+    install_requires=['six>=1.3', 'futures'],
 )
