@@ -7,6 +7,23 @@ import logging
 log = logging.getLogger(__name__)
 
 
+def local(*args, **kw):
+    """
+    Run a local command
+    """
+    if log.isEnabledFor(logging.INFO):
+        log.info(' '.join(args))
+    p = subprocess.Popen(
+        *args,
+        stdout=subprocess.PIPE,
+        stdin=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        **kw
+    )
+
+    return p.communicate()
+
+
 class Compiler(object):
 
     def __init__(self, output_file, dependant, maker=None):
@@ -56,22 +73,6 @@ class Compiler(object):
     def run(self):
         raise NotImplementedError()
 
-    def local(self, *args, **kw):
-        """
-        Run a local command
-        """
-        if log.isEnabledFor(logging.INFO):
-            log.info(' '.join(args))
-        p = subprocess.Popen(
-            *args,
-            stdout=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            **kw
-        )
-
-        stdout, stderr = p.communicate()
-
 
 class coffee(Compiler):
     def run(self):
@@ -80,7 +81,7 @@ class coffee(Compiler):
             log.info('mkdir -p {0}'.format(self.output_directory))
             os.makedirs(self.output_directory)
 
-        self.local(
+        local(
             # stupid coffee compiler expects a directory and you can't just give it an output file _name_
             'coffee --print "{0}" > "{1}"'.format(' '.join(self.sources()), self.output_file),
             shell=True,
@@ -93,7 +94,7 @@ class uglify(Compiler):
             log.info('mkdir -p {0}'.format(self.output_directory))
             os.makedirs(self.output_directory)
 
-        self.local([
+        local([
             'uglify',
             '--no-copyright',
             '-o',
