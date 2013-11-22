@@ -12,7 +12,7 @@ def local(*args, **kw):
     Run a local command
     """
     if log.isEnabledFor(logging.INFO):
-        log.info(' '.join(args))
+        log.info(str(args))
     p = subprocess.Popen(
         *args,
         stdout=subprocess.PIPE,
@@ -26,14 +26,14 @@ def local(*args, **kw):
 
 class Compiler(object):
 
-    def __init__(self, output_file, dependant, maker=None):
+    def __init__(self, output_file, dependent, maker=None):
         """
         A base class for compilers
 
         ``output_file`` - the output file relative to the project directory
-        ``dependant`` - dependant files. Expects a list of glob patterns or functions.
-            Dependant functions will be called with no arguments to get a list of files.
-            If ``dependant`` is a string, it will be converted to a list.
+        ``dependent`` - dependent files. Expects a list of glob patterns or functions.
+            dependent functions will be called with no arguments to get a list of files.
+            If ``dependent`` is a string, it will be converted to a list.
         """
 
         # the maker instance. this will be set when this instance is used by a Maker
@@ -43,9 +43,9 @@ class Compiler(object):
         self._maker = None
         self.maker = maker
 
-        if isinstance(dependant, six.string_types):
-            dependant = [dependant]
-        self.dependant = dependant
+        if isinstance(dependent, six.string_types):
+            dependent = [dependent]
+        self.dependent = dependent
         super(Compiler, self).__init__()
 
     @property
@@ -61,7 +61,7 @@ class Compiler(object):
             self.output_file = os.path.abspath(os.path.join(self.maker.directory, self._output_file))
 
     def sources(self):
-        for source in self.dependant:
+        for source in self.dependent:
             yield os.path.join(self.maker.directory, source)
 
     def __call__(self, *args, **kwargs):
@@ -72,6 +72,9 @@ class Compiler(object):
 
     def run(self):
         raise NotImplementedError()
+
+    def __repr__(self):
+        return u'<{} -> [{}]>'.format(self.output_file, ', '.join(self.dependent))
 
 
 class coffee(Compiler):
@@ -95,9 +98,21 @@ class uglify(Compiler):
             os.makedirs(self.output_directory)
 
         local([
-            'uglify',
+            'uglifyjs2',
             '--no-copyright',
             '-o',
             self.output_file,
         ] + list(self.sources())
+        )
+
+
+class compass(Compiler):
+    """
+    The Compass compiler for sass projects
+    """
+    def run(self):
+        # this assumes you have most project settings defined in config.rb
+        local(
+            'compass compile "{0}"'.format(' '.join(self.sources())),
+            shell=True,
         )

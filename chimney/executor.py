@@ -39,6 +39,9 @@ class DelayedThreadPoolExecutor(_base.Executor):
 
             w = _WorkItem(runner.future, runner.task, args, kw)
 
+            def on_done(f):
+                self._work_queue.task_done()
+            runner.future.add_done_callback(on_done)
             self._work_queue.put(w)
             self._adjust_thread_count()
             return runner.future

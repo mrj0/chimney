@@ -25,9 +25,8 @@ def test_graph_sort():
         graph.arc(task)
 
     # ignore the coffee files
-    pprint(list(graph.toposort()))
-    run_plan = [s for s in graph.toposort() if not s.endswith('.coffee')]
-    eq_(run_plan, ['other.js', 'combined.js', 'combined.min.js'])
+    run_plan = list(graph.toposort())
+    eq_(run_plan, [tasks[1], tasks[0], tasks[2]])
 
 
 def test_runner():

@@ -13,6 +13,18 @@ class Observation(object):
     def __repr__(self):
         return u'<Observation>("{}", "{}")'.format(self.path, self.type)
 
+    def __str__(self):
+        return u'<Observation>("{}", "{}")'.format(self.path, self.type)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return self.path == other.path and self.type == other.type
+
+    def __ne__(self, other):
+        return self.path != other.path or self.type != other.type
+
 
 class Watcher(FileSystemEventHandler):
     def __init__(self, change_handler, path=os.curdir):
@@ -24,15 +36,8 @@ class Watcher(FileSystemEventHandler):
 
         super(Watcher, self).__init__()
 
-    def on_any_event(self, event):
-        if event.is_directory or event.event_type == 'created':
-            return
-
-        if event.event_type == 'moved':
-            self.change_handler(Observation(event.src_path, 'deleted'))
-            self.change_handler(Observation(event.dest_path, 'created'))
-        else:
-            self.change_handler(Observation(event.src_path, event.event_type))
+    def on_modified(self, event):
+        self.change_handler(Observation(event.src_path, event.event_type))
 
     def stop(self):
         self.observer.stop()

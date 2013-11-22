@@ -21,9 +21,9 @@ class TaskFuture(Future):
             return self._state in [CANCELLED, CANCELLED_AND_NOTIFIED] or self._exception is not None
 
 
-class TaskGraph(OrderedDict):
+class DiGraph(OrderedDict):
     def __init__(self, roots=None):
-        super(TaskGraph, self).__init__()
+        super(DiGraph, self).__init__()
         if roots:
             map(self.arc, roots)
 
@@ -32,7 +32,7 @@ class TaskGraph(OrderedDict):
         if key not in self:
             self[key] = set()
 
-        sources = set(task.dependant)
+        sources = set(task.dependent)
         self[key] = self[key].union(sources)
 
         for source in sources:
@@ -40,10 +40,21 @@ class TaskGraph(OrderedDict):
             if not source in self:
                 self[source] = set()
 
+
+class TaskGraph(object):
+    def __init__(self, roots=None):
+        super(TaskGraph, self).__init__()
+        self.graph = DiGraph(roots=roots)
+        self.tasks = {}
+
+    def arc(self, task):
+        self.graph.arc(task)
+        self.tasks[task.output_file] = task
+
     def toposort(self):
-        if len(self) > 0:
-            data = TaskGraph()
-            map(data.__setitem__, self.keys(), self.values())
+        if self.graph:
+            data = DiGraph()
+            map(data.__setitem__, self.graph.keys(), self.graph.values())
 
             for k, v in data.items():
                 v.discard(k)   # Ignore self dependencies
@@ -54,7 +65,9 @@ class TaskGraph(OrderedDict):
                 if not ordered:
                     break
                 for el in ordered:
-                    yield el
+                    task = self.tasks.get(el)
+                    if task:
+                        yield task
                 data = dict([(item, (dep - ordered)) for item, dep in six.iteritems(data)
                             if item not in ordered])
             assert not data, "Data has a cyclic dependency"
@@ -100,11 +113,6 @@ class Scheduler(object):
     def __init__(self):
         # the dependency graph of all tasks stored by target (string path) and a set of tasks depending on the target
         self.targets = TaskGraph()
-        # graph of tasks by key: sources by value: dependencies
-        self.sources = TaskGraph()
-
-        # tasks mapped by the target that they create
-        self.task_products = {}
 
         super(Scheduler, self).__init__()
 
@@ -112,10 +120,7 @@ class Scheduler(object):
         """
         Load tasks and calculate dependencies
         """
-        for c in compilers:
-            self.task_products[c.output_file] = c
-
-        # make an arc from every dependant file to the task that creates it
+        # make an arc from every dependent file to the task that creates it
         for c in compilers:
             self.targets.arc(c)
 
@@ -128,16 +133,13 @@ class Scheduler(object):
 
         # create runners for all of the compiler tasks
         runners = {}
-        for output_file, c in six.iteritems(self.task_products):
-            runners[output_file] = Runner(c)
 
         # build dependency lists for each runner
-        for source, dependencies in six.iteritems(self.targets):
-            runner = runners.get(source)
-            if not runner:
-                continue
+        for task in self.targets.toposort():
+            runner = Runner(task)
+            runners[task.output_file] = runner
 
-            for dep in dependencies:
+            for dep in task.dependent:
                 wait_for = runners.get(dep)
                 # if not present there's nothing in the schedule that produces this file. that's normal
                 if wait_for:
