@@ -22,5 +22,5 @@ setup(
         'Development Status :: 1 - Planning',
     ],
     packages=['chimney'],
-    install_requires=['six>=1.3', 'futures'],
+    install_requires=['six>=1.3', 'futures', 'watchdog'],
 )

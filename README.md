@@ -62,6 +62,26 @@ Chimney already provides compilers for the most popular web
 assets. Others can easily be added to your script by extending the
 Compiler class.
 
+Watching for changes
+--------------------
+
+To automatically re-execute tasks when their dependencies change,
+the function ``chimney.watch`` will first execute all tasks normally
+but then it will watch for any filesystem changes.
+
+To get this functionality, simply change the above example to:
+
+```python
+chimney.watch(
+    coffee('smoke.js', ['wood.coffee', 'fire.coffee']),
+    uglify('smoke.min.js', 'smoke.js'),
+)
+```
+
+Whenever the coffee files are changed, ``smoke.js`` will be re-created
+using the ``coffee`` compiler. Then ``smoke.min.js`` will be created, too.
+
+
 About
 -----
 

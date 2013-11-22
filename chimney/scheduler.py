@@ -99,7 +99,9 @@ class Scheduler(object):
 
     def __init__(self):
         # the dependency graph of all tasks stored by target (string path) and a set of tasks depending on the target
-        self.graph = TaskGraph()
+        self.targets = TaskGraph()
+        # graph of tasks by key: sources by value: dependencies
+        self.sources = TaskGraph()
 
         # tasks mapped by the target that they create
         self.task_products = {}
@@ -115,7 +117,7 @@ class Scheduler(object):
 
         # make an arc from every dependant file to the task that creates it
         for c in compilers:
-            self.graph.arc(c)
+            self.targets.arc(c)
 
         return self
 
@@ -130,7 +132,7 @@ class Scheduler(object):
             runners[output_file] = Runner(c)
 
         # build dependency lists for each runner
-        for source, dependencies in six.iteritems(self.graph):
+        for source, dependencies in six.iteritems(self.targets):
             runner = runners.get(source)
             if not runner:
                 continue

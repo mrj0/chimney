@@ -4,6 +4,7 @@ from contextlib import closing
 import logging
 import six
 from chimney.scheduler import Scheduler
+from chimney.watch import Watcher
 from executor import DelayedThreadPoolExecutor
 
 
@@ -41,7 +42,23 @@ class Maker(object):
         for runner in six.itervalues(runners):
             runner.schedule(self.executor)
     #        runner.future.add_done_callback(self.on_task_finished)
-    #
+
+    def watch(self):
+        scheduler = Scheduler().load(self.tasks)
+        runners = scheduler.run(self.executor)
+        # schedule all of the runners
+        for runner in six.itervalues(runners):
+            runner.schedule(self.executor)
+
+        #self.executor.wait()
+        #print 'done waiting'
+
+        def change_handler(obs):
+            print 'got an observation!!', obs
+            print runners
+        self.watcher = Watcher(change_handler)
+        log.info('Watching for changes. Control-C to cancel')
+
     #def on_task_finished(self, task):
     #    pass
 
@@ -55,3 +72,11 @@ def make(*tasks):
     with closing(Maker(*tasks)) as maker:
         maker.execute()
         return maker
+
+
+def watch(*tasks):
+    log.info('Start')
+
+    maker = Maker(*tasks)
+    maker.watch()
+    return maker

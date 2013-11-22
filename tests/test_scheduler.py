@@ -1,3 +1,4 @@
+from pprint import pprint
 from concurrent.futures import _base
 from mock import Mock
 from nose.tools import eq_
@@ -24,6 +25,7 @@ def test_graph_sort():
         graph.arc(task)
 
     # ignore the coffee files
+    pprint(list(graph.toposort()))
     run_plan = [s for s in graph.toposort() if not s.endswith('.coffee')]
     eq_(run_plan, ['other.js', 'combined.js', 'combined.min.js'])
 
