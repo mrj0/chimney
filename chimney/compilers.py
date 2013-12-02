@@ -1,10 +1,32 @@
+from __future__ import print_function
 import os
 import six
 import subprocess
 import logging
+import sys
 
 
 log = logging.getLogger(__name__)
+
+
+class CompilerError(Exception):
+    def __init__(self, args, returncode, stdout, stderr):
+        self.command_args = args
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+        super(CompilerError, self).__init__()
+
+    def __repr__(self):
+        ret = u'Returned exit code {0} for command: "{1}"'.format(
+            self.returncode, self.command_args,
+        )
+
+        if self.stdout:
+            ret += u'\nOutput:\n{0}'.format(self.stdout.strip())
+        if self.stderr:
+            ret += u'\nErrors:\n{0}'.format(self.stderr.strip())
+        return ret
 
 
 def local(*args, **kw):
@@ -21,7 +43,10 @@ def local(*args, **kw):
         **kw
     )
 
-    return p.communicate()
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        raise CompilerError(args, p.returncode, stdout, stderr)
+    return stdout, stderr
 
 
 class Compiler(object):
@@ -67,6 +92,14 @@ class Compiler(object):
     def __call__(self, *args, **kwargs):
         try:
             self.run()
+        except CompilerError as c:
+            log.error('Task failed')
+            print(
+                u'========================================\n'
+                u'Task failed: {}'.format(repr(c)) +
+                u'\n========================================',
+                file=sys.stderr
+            )
         except Exception:
             log.exception('Task failed')
 
@@ -98,7 +131,7 @@ class uglify(Compiler):
             os.makedirs(self.output_directory)
 
         local([
-            'uglifyjs2',
+            'uglifyjs',
             '--no-copyright',
             '-o',
             self.output_file,
