@@ -88,17 +88,17 @@ class Maker(object):
         self.executor.shutdown()
 
 
-def make(*tasks):
+def make(*tasks, **kwargs):
     log.info('Start')
 
-    with closing(Maker(*tasks)) as maker:
+    with closing(Maker(*tasks, **kwargs)) as maker:
         maker.execute()
         return maker
 
 
-def watch(*tasks):
+def watch(*tasks, **kwargs):
     log.info('Start')
 
-    maker = Maker(*tasks)
+    maker = Maker(*tasks, **kwargs)
     maker.watch()
     return maker
