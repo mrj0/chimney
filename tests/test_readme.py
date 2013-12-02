@@ -64,11 +64,13 @@ def test_watch():
 
     maker.watcher.change_handler(Observation('wood.coffee', 'modified'))
     maker.process_changes()
+    maker.executor.wait()
     eq_(coffee.run.call_count, 2)
     eq_(uglify.run.call_count, 1)
 
     maker.watcher.change_handler(Observation('smoke.js', 'modified'))
     maker.process_changes()
+    maker.executor.wait()
     eq_(uglify.run.call_count, 2)
 
     maker.watcher.stop()
