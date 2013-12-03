@@ -40,15 +40,16 @@ class Maker(object):
         super(Maker, self).__init__()
 
     def execute(self):
-        runners = Scheduler().load(self.tasks).run(self.executor)
+        runners = Scheduler().load(self.tasks).run()
         # schedule all of the runners
         for runner in six.itervalues(runners):
             runner.schedule(self.executor)
-    #        runner.future.add_done_callback(self.on_task_finished)
+
+        self.executor.wait()
 
     def watch(self):
         scheduler = Scheduler().load(self.tasks)
-        runners = scheduler.run(self.executor)
+        runners = scheduler.run()
 
         # schedule all of the runners
         self.by_source = {}

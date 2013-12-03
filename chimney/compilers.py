@@ -83,7 +83,7 @@ class Compiler(object):
         if self._maker:
             self.output_directory = os.path.abspath(
                 os.path.join(self.maker.directory, os.path.dirname(self.output_file)))
-            self.output_file = os.path.abspath(os.path.join(self.maker.directory, self._output_file))
+            #self.output_file = os.path.abspath(os.path.join(self.maker.directory, self._output_file))
 
     def sources(self):
         for source in self.dependent:

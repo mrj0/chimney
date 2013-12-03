@@ -88,7 +88,7 @@ class Runner(object):
 
         super(Runner, self).__init__()
 
-    def schedule(self, executor):
+    def schedule(self, executor, _reschedule=False):
         """
         Try to schedule this Runner with the executor or wait for dependencies
         """
@@ -100,9 +100,11 @@ class Runner(object):
             return
 
         def dep_finished_callback(future):
-            self.schedule(executor)
-        for runner in self.waiting_for:
-            runner.future.add_done_callback(dep_finished_callback)
+            self.schedule(executor, _reschedule=True)
+
+        if not _reschedule:
+            for runner in self.waiting_for:
+                runner.future.add_done_callback(dep_finished_callback)
 
 
 class Scheduler(object):
@@ -126,9 +128,9 @@ class Scheduler(object):
 
         return self
 
-    def run(self, executor):
+    def run(self):
         """
-        Get a new tree of tasks and dependencies.
+        Get runners for the scheduled tasks
         """
 
         # create runners for all of the compiler tasks
