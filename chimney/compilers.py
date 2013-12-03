@@ -130,12 +130,15 @@ class uglify(Compiler):
             log.info('mkdir -p {0}'.format(self.output_directory))
             os.makedirs(self.output_directory)
 
-        local([
-            'uglifyjs',
-            '--no-copyright',
-            '-o',
-            self.output_file,
+        command_pieces = [
+             'uglifyjs',
+             '--output',
+              self.output_file,
         ] + list(self.sources())
+
+        local(
+            ' '.join(command_pieces),
+            shell=True,
         )
 
 
