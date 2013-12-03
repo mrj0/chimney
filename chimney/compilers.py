@@ -118,10 +118,9 @@ class coffee(Compiler):
             try:
                 os.makedirs(self.output_directory)
             except OSError as e:
-                if e.errno == 17:
+                if e.errno != 17:
                     # the directory might already exist (because another thread created it)
-                    pass
-                raise
+                    raise
 
         # stupid coffee compiler expects a directory and you can't just give it an output file _name_
         stdout, stderr = local(['coffee', '--print'] + list(self.sources()))
