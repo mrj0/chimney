@@ -34,7 +34,7 @@ def local(*args, **kw):
     Run a local command
     """
     if log.isEnabledFor(logging.INFO):
-        log.info(str(args))
+        log.info(' '.join(args[0]))
     p = subprocess.Popen(
         *args,
         stdout=subprocess.PIPE,
@@ -114,14 +114,20 @@ class coffee(Compiler):
     def run(self):
         # ensure the destination directory exists
         if not os.path.exists(self.output_directory):
-            log.info('mkdir -p {0}'.format(self.output_directory))
-            os.makedirs(self.output_directory)
+            log.info('mkdir -p "{0}"'.format(self.output_directory))
+            try:
+                os.makedirs(self.output_directory)
+            except OSError as e:
+                if e.errno == 17:
+                    # the directory might already exist (because another thread created it)
+                    pass
+                raise
 
-        local(
-            # stupid coffee compiler expects a directory and you can't just give it an output file _name_
-            'coffee --print "{0}" > "{1}"'.format(' '.join(self.sources()), self.output_file),
-            shell=True,
-        )
+        # stupid coffee compiler expects a directory and you can't just give it an output file _name_
+        stdout, stderr = local(['coffee', '--print'] + list(self.sources()))
+        log.info('writing {0}'.format(self.output_file))
+        with open(self.output_file, 'wb') as f:
+            f.write(stdout)
 
 
 class uglify(Compiler):
@@ -130,16 +136,11 @@ class uglify(Compiler):
             log.info('mkdir -p {0}'.format(self.output_directory))
             os.makedirs(self.output_directory)
 
-        command_pieces = [
-             'uglifyjs',
-             '--output',
-              self.output_file,
-        ] + list(self.sources())
-
-        local(
-            ' '.join(command_pieces),
-            shell=True,
-        )
+        local([
+            'uglifyjs',
+            '-o',
+            self.output_file,
+        ] + list(self.sources()))
 
 
 class compass(Compiler):
@@ -148,7 +149,4 @@ class compass(Compiler):
     """
     def run(self):
         # this assumes you have most project settings defined in config.rb
-        local(
-            'compass compile "{0}"'.format(' '.join(self.sources())),
-            shell=True,
-        )
+        local(['compass', 'compile'] + list(self.sources()))
