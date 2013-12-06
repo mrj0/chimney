@@ -17,7 +17,7 @@ setup(
     long_description=read_file('README.md'),
     version='0.1',
     url='https://github.com/mrj0/chimney/',
-    license='BSD',
+    license='GPL',
     classifiers=[
         'Development Status :: 3 - Alpha',
     ],
