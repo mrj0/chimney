@@ -80,13 +80,3 @@ chimney.watch(
 
 Whenever the coffee files are changed, ``smoke.js`` will be re-created
 using the ``coffee`` compiler. Then ``smoke.min.js`` will be created, too.
-
-
-About
------
-
-Why the name Chimney?
-
-Well, these web projects are busy solving lots of problems. They're on
-fire. And you can't bring a fire in-house unless you have a
-chimney. Something like that. (And the pypi name was available.)
