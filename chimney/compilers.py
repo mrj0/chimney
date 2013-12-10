@@ -49,6 +49,15 @@ def local(*args, **kw):
     return stdout, stderr
 
 
+def mkdirs(path, mode=0777):
+    try:
+        os.makedirs(path, mode=mode)
+    except OSError as e:
+        if e.errno != 17:
+            # the directory might already exist (because another thread created it)
+            raise
+
+
 class Compiler(object):
 
     def __init__(self, output_file, dependent, maker=None):
@@ -112,13 +121,7 @@ class Compiler(object):
 
 class coffee(Compiler):
     def run(self):
-        # ensure the destination directory exists
-        try:
-            os.makedirs(self.output_directory)
-        except OSError as e:
-            if e.errno != 17:
-                # the directory might already exist (because another thread created it)
-                raise
+        mkdirs(self.output_directory)
 
         # stupid coffee compiler expects a directory and you can't just give it an output file _name_
         stdout, stderr = local(['coffee', '--print'] + list(self.sources()))
@@ -129,9 +132,7 @@ class coffee(Compiler):
 
 class uglify(Compiler):
     def run(self):
-        if not os.path.exists(self.output_directory):
-            log.info('mkdir -p {0}'.format(self.output_directory))
-            os.makedirs(self.output_directory)
+        mkdirs(self.output_directory)
 
         local([
             'uglifyjs',
