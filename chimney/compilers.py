@@ -4,6 +4,8 @@ import six
 import subprocess
 import logging
 import sys
+from chimney import flags
+from chimney.flags import Arguments, Flag
 
 
 log = logging.getLogger(__name__)
@@ -59,8 +61,9 @@ def mkdirs(path, mode=0777):
 
 
 class Compiler(object):
+    arguments = Arguments()
 
-    def __init__(self, output_file, dependent, maker=None):
+    def __init__(self, output_file, dependent, maker=None, extra_flags=None, **kwargs):
         """
         A base class for compilers
 
@@ -76,11 +79,21 @@ class Compiler(object):
         self.output_directory = None
         self._maker = None
         self.maker = maker
+        self.extra_flags = extra_flags or {}
 
         if isinstance(dependent, six.string_types):
             dependent = [dependent]
         self.dependent = dependent
         super(Compiler, self).__init__()
+
+        # parse the keywords into extra_flags
+        if self.arguments:
+            for name, value in six.iteritems(kwargs):
+                flag = self.arguments.args.get(name)
+                if flag is None:
+                    raise flags.InvalidFlagError(u'Invalid flag: {0}'.format(name))
+                flag.validate(value)
+                self.extra_flags[flag.switch] = value
 
     @property
     def maker(self):
@@ -95,8 +108,18 @@ class Compiler(object):
             #self.output_file = os.path.abspath(os.path.join(self.maker.directory, self._output_file))
 
     def sources(self):
+        """
+        A generator for dependent files for use with the compiler. The path to resources
+        may be adjusted to work in the compiler's execution environment.
+        """
         for source in self.dependent:
-            yield os.path.join(self.maker.directory, source)
+            yield source
+
+    def get_flags(self):
+        """
+        Return extra_flags as a list for execute()
+        """
+        return [u'{0} {1}'.format(n, v) for n, v in six.iteritems(self.extra_flags)]
 
     def __call__(self, *args, **kwargs):
         try:
@@ -118,27 +141,75 @@ class Compiler(object):
     def __repr__(self):
         return u'<{} -> [{}]>'.format(self.output_file, ', '.join(self.dependent))
 
+    def execute_command(self, *args, **kw):
+        """
+        Execute a command
+        """
+        return local(*args, **kw)
+
+
+class ShellCompilerMixin(object):
+    def execute_command(self, *args, **kw):
+        # uglify run without shell=True doesn't create source maps, todo
+        if log.isEnabledFor(logging.INFO):
+            log.info(' '.join(args[0]))
+        p = subprocess.Popen(
+            ' '.join(args[0]),
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            **kw
+        )
+
+        stdout, stderr = p.communicate()
+        returncode = p.poll()
+        if returncode != 0:
+            raise CompilerError(args, returncode, stdout, stderr)
+        return stdout, stderr
+
 
 class coffee(Compiler):
     def run(self):
         mkdirs(self.output_directory)
 
         # stupid coffee compiler expects a directory and you can't just give it an output file _name_
-        stdout, stderr = local(['coffee', '--print'] + list(self.sources()))
+        stdout, stderr = self.execute_command(['coffee', '--print'] + list(self.sources()))
         log.info('writing {0}'.format(self.output_file))
         with open(self.output_file, 'wb') as f:
             f.write(stdout)
 
 
-class uglify(Compiler):
+class uglify(ShellCompilerMixin, Compiler):
+    arguments = Arguments(
+        source_map=Flag(),
+        source_map_root=Flag(required=True),
+        source_map_url=Flag(required=True),
+        in_source_map=Flag(),
+        wrap=Flag(required=True),
+        export_all=Flag(),
+        define=Flag(required=True),
+        enclose=Flag(required=True),
+        acorn=Flag(),
+        screw_ie8=Flag(),
+    )
+
+    def __init__(self, output_file, dependent, maker=None, extra_flags=None, **kwargs):
+        # make some default options for these source map files. uglify doesn't do anything sensible
+
+        if 'source_map' in kwargs and kwargs['source_map'] is None:
+            kwargs['source_map'] = os.path.join(os.path.dirname(output_file),
+                                                os.path.basename(output_file) + u'.map')
+        if 'source_map_url' in kwargs and kwargs['source_map_url'] is None:
+            kwargs['source_map_url'] = os.path.basename(output_file) + u'.map'
+
+        super(uglify, self).__init__(output_file, dependent, maker, extra_flags, **kwargs)
+
     def run(self):
         mkdirs(self.output_directory)
 
-        local([
-            'uglifyjs',
-            '-o',
-            self.output_file,
-        ] + list(self.sources()))
+        cmd = ['uglifyjs'] + self.get_flags() + ['-o', self.output_file] + list(self.sources())
+        self.execute_command(cmd)
 
 
 class compass(Compiler):
@@ -147,4 +218,4 @@ class compass(Compiler):
     """
     def run(self):
         # this assumes you have most project settings defined in config.rb
-        local(['compass', 'compile'] + list(self.sources()))
+        self.execute_command(['compass', 'compile'] + list(self.sources()))
