@@ -1,3 +1,4 @@
+import fnmatch
 import multiprocessing
 import os
 from contextlib import closing
@@ -17,6 +18,8 @@ class Maker(object):
     """
     Main class of chimney. Executes compilers and stuff.
     """
+    STOP_WATCHING = 0
+    RELOAD = 1
 
     def __init__(self, *tasks, **kw):
         """
@@ -47,7 +50,7 @@ class Maker(object):
 
         self.executor.wait()
 
-    def watch(self):
+    def watch(self, reload_patterns=None):
         scheduler = Scheduler().load(self.tasks)
         runners = scheduler.run()
 
@@ -67,19 +70,38 @@ class Maker(object):
 
         try:
             while self.sleep():
-                self.process_changes()
+                ret = self.process_changes(reload_patterns)
+                if ret == Maker.RELOAD:
+                    return Maker.RELOAD
         except KeyboardInterrupt:
             self.close()
 
-    def process_changes(self):
+        return Maker.STOP_WATCHING
+
+    def process_changes(self, reload_patterns=None):
         batch = self.changes
         self.changes = []
         for obs in set(batch):
+            if obs.type in ('created', 'deleted',):
+                if reload_patterns is None:
+                    log.info(u'File %s: %s, reloading', obs.type, obs.path)
+                    return Maker.RELOAD
+
+                for p in reload_patterns:
+                    if fnmatch.fnmatch(obs.path, p):
+                        log.info(u'File created: %s, reloading', obs.path)
+                        return Maker.RELOAD
+
+            if obs.type != 'modified':
+                continue
+
             task = self.by_source.get(os.path.abspath(obs.path))
             if task:
                 log.info('Detected %s: %s', obs.type, obs.path)
                 runner = Runner(task)
                 runner.schedule(self.executor)
+
+        return None
 
     def sleep(self):
         time.sleep(.1)
@@ -97,9 +119,14 @@ def make(*tasks, **kwargs):
         return maker
 
 
-def watch(*tasks, **kwargs):
+def watch(func, reload_patterns=None, **kwargs):
     log.info('Start')
 
-    maker = Maker(*tasks, **kwargs)
-    maker.watch()
+    while True:
+        maker = Maker(*func(), **kwargs)
+        ret = maker.watch(reload_patterns)
+
+        if ret == Maker.STOP_WATCHING:
+            break
+
     return maker

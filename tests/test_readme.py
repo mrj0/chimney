@@ -54,10 +54,13 @@ def test_watch():
     Maker.sleep = MagicMock()
     Maker.sleep.return_value = False
 
-    maker = chimney.watch(
-        coffee('smoke.js', ['wood.coffee', 'fire.coffee']),
-        uglify('smoke.min.js', 'smoke.js'),
-    )
+    def create_tasks():
+        return [
+            coffee('smoke.js', ['wood.coffee', 'fire.coffee']),
+            uglify('smoke.min.js', 'smoke.js'),
+        ]
+
+    maker = chimney.watch(create_tasks)
 
     eq_(coffee.run.call_count, 1)
     eq_(uglify.run.call_count, 1)

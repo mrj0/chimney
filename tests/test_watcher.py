@@ -17,13 +17,16 @@ def test_watcher():
         events = []
         def change_handler(obs):
             events.append(obs)
-        watcher = Watcher(change_handler, path=watched)
+        Watcher(change_handler, path=watched)
 
         with open(created, 'wb') as f:
             f.write('created')
 
         time.sleep(.1)
-        obs = events.pop()
+        obs = events.pop(0)
+        eq_(obs.path, created)
+        eq_(obs.type, 'created')
+        obs = events.pop(0)
         eq_(obs.path, created)
         eq_(obs.type, 'modified')
         eq_(0, len(events))

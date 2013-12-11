@@ -69,14 +69,37 @@ To automatically re-execute tasks when their dependencies change,
 the function ``chimney.watch`` will first execute all tasks normally
 but then it will watch for any filesystem changes.
 
-To get this functionality, simply change the above example to:
+To get this functionality, the api is slightly different. Instead of
+expecting a list of tasks, the function ``chimney.watch`` requires
+a function. This is called when new files are added so the dependencies
+can be recalculated. For example:
 
 ```python
-chimney.watch(
-    coffee('smoke.js', ['wood.coffee', 'fire.coffee']),
-    uglify('smoke.min.js', 'smoke.js'),
-)
+def create_tasks():
+    return [
+        coffee('smoke.js', ['wood.coffee', 'fire.coffee']),
+        uglify('smoke.min.js', 'smoke.js'),
+    ]
+
+chimney.watch(create_tasks)
 ```
 
 Whenever the coffee files are changed, ``smoke.js`` will be re-created
 using the ``coffee`` compiler. Then ``smoke.min.js`` will be created, too.
+When new files are added, the function ``create_tasks`` will be re-executed
+to build a new set of tasks. This is useful for dynamically building
+tasks.
+
+By default, the reload will start chimney on all new files, which may
+be too often. You can provide a list of (shell) patterns to match
+to limit reloading:
+
+```python
+def create_tasks():
+    return [
+        coffee('smoke.js', ['wood.coffee', 'fire.coffee']),
+        uglify('smoke.min.js', 'smoke.js'),
+    ]
+
+chimney.watch(create_tasks, reload_patterns=['*.coffee'])
+```

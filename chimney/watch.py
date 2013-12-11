@@ -36,7 +36,7 @@ class Watcher(FileSystemEventHandler):
 
         super(Watcher, self).__init__()
 
-    def on_modified(self, event):
+    def on_any_event(self, event):
         self.change_handler(Observation(event.src_path, event.event_type))
 
     def stop(self):
