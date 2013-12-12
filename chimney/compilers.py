@@ -4,6 +4,7 @@ import six
 import subprocess
 import logging
 import sys
+from path import path
 from chimney import flags
 from chimney.flags import Arguments, Flag
 
@@ -74,8 +75,7 @@ class Compiler(object):
         """
 
         # the maker instance. this will be set when this instance is used by a Maker
-        self.output_file = output_file
-        self._output_file = output_file
+        self.output_file = path(output_file)
         self.output_directory = None
         self._maker = None
         self.maker = maker
@@ -83,7 +83,7 @@ class Compiler(object):
 
         if isinstance(dependent, six.string_types):
             dependent = [dependent]
-        self.dependent = dependent
+        self.dependent = map(path, dependent)
         super(Compiler, self).__init__()
 
         # parse the keywords into extra_flags
@@ -103,9 +103,7 @@ class Compiler(object):
     def maker(self, v):
         self._maker = v
         if self._maker:
-            self.output_directory = os.path.abspath(
-                os.path.join(self.maker.directory, os.path.dirname(self.output_file)))
-            #self.output_file = os.path.abspath(os.path.join(self.maker.directory, self._output_file))
+            self.output_directory = self.output_file.dirname()
 
     def sources(self):
         """
@@ -122,6 +120,13 @@ class Compiler(object):
         return [u'{0} {1}'.format(n, v) for n, v in six.iteritems(self.extra_flags)]
 
     def __call__(self, *args, **kwargs):
+        try:
+            if max([d.mtime for d in self.sources()]) < self.output_file.mtime:
+                return
+        except OSError as e:
+            # a file doesn't exist?
+            pass
+
         try:
             self.run()
         except CompilerError as c:

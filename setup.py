@@ -22,5 +22,5 @@ setup(
         'Development Status :: 3 - Alpha',
     ],
     packages=['chimney'],
-    install_requires=['six>=1.3', 'futures', 'watchdog'],
+    install_requires=['six>=1.3', 'futures', 'watchdog', 'path.py'],
 )
