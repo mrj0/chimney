@@ -185,6 +185,12 @@ class coffee(Compiler):
             f.write(stdout)
 
 
+class sqwish(Compiler):
+    def run(self):
+        cmd = ['sqwish'] + list(self.sources()) + ['-o', self.output_file]
+        self.execute_command(cmd)
+
+
 class uglify(ShellCompilerMixin, Compiler):
     arguments = Arguments(
         source_map=Flag(),
