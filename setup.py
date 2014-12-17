@@ -15,7 +15,7 @@ setup(
     name='chimney',
     description='Compile web assets',
     long_description=read_file('README.md'),
-    version='0.2',
+    version='0.3',
     url='https://github.com/mrj0/chimney/',
     license='GPL',
     classifiers=[
