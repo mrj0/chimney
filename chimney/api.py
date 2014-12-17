@@ -74,6 +74,8 @@ class Maker(object):
                 if ret == Maker.RELOAD:
                     return Maker.RELOAD
         except KeyboardInterrupt:
+            pass
+        finally:
             self.close()
 
         return Maker.STOP_WATCHING
@@ -89,7 +91,7 @@ class Maker(object):
 
                 for p in reload_patterns:
                     if fnmatch.fnmatch(obs.path, p):
-                        log.info(u'File created: %s, reloading', obs.path)
+                        log.info(u'File %s: %s, reloading', obs.type, obs.path)
                         return Maker.RELOAD
 
             if obs.type != 'modified':
@@ -108,6 +110,12 @@ class Maker(object):
         return True
 
     def close(self):
+        try:
+            if self.watcher:
+                self.watcher.stop()
+        except Exception:
+            log.info('Failed to stop watcher', exc_info=True)
+
         self.executor.shutdown()
 
 
