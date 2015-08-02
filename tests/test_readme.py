@@ -51,6 +51,8 @@ def test_watch():
 
     coffee.run = MagicMock()
     uglify.run = MagicMock()
+    close = Maker.close  # don't let it shutdown yet
+    Maker.close = MagicMock()
     Maker.sleep = MagicMock()
     Maker.sleep.return_value = False
 
@@ -60,7 +62,7 @@ def test_watch():
             uglify('smoke.min.js', 'smoke.js'),
         ]
 
-    maker = chimney.watch(create_tasks)
+    maker = chimney.watch(create_tasks, reload_patterns=['*.coffee', '*.js'])
 
     eq_(coffee.run.call_count, 1)
     eq_(uglify.run.call_count, 1)
@@ -76,4 +78,5 @@ def test_watch():
     maker.executor.wait()
     eq_(uglify.run.call_count, 2)
 
+    close(maker)
     maker.watcher.stop()

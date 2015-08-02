@@ -37,7 +37,7 @@ class DiGraph(OrderedDict):
 
         for source in sources:
             # ensure there's a key for this dependency
-            if not source in self:
+            if source not in self:
                 self[source] = set()
 
 
