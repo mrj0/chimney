@@ -15,11 +15,11 @@ setup(
     name='chimney',
     description='Compile web assets',
     long_description=read_file('README.md'),
-    version='0.3',
+    version='0.4',
     url='https://github.com/mrj0/chimney/',
     license='GPL',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
     ],
     packages=['chimney'],
     install_requires=['six>=1.3', 'futures', 'watchdog', 'path.py'],
