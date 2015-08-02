@@ -1,0 +1,3 @@
+# development dependencies. use `setup.py develop` to get the runtime deps
+mock
+nose
