@@ -1,3 +1,4 @@
+import mock
 import os
 from mock import MagicMock
 import time
@@ -42,19 +43,16 @@ def test_combine():
     assert uglify.run.called
 
 
-def test_watch():
+@mock.patch.object(Maker, 'close')   # don't let it shutdown since sleep() is patched
+@mock.patch.object(Maker, 'sleep')
+def test_watch(sleep_mock, close_mock):
+    sleep_mock.return_value = False
+
     class coffee(chimney.compilers.Compiler):
-        pass
+        run = MagicMock()
 
     class uglify(chimney.compilers.Compiler):
-        pass
-
-    coffee.run = MagicMock()
-    uglify.run = MagicMock()
-    close = Maker.close  # don't let it shutdown yet
-    Maker.close = MagicMock()
-    Maker.sleep = MagicMock()
-    Maker.sleep.return_value = False
+        run = MagicMock()
 
     def create_tasks():
         return [
@@ -77,6 +75,3 @@ def test_watch():
     maker.process_changes()
     maker.executor.wait()
     eq_(uglify.run.call_count, 2)
-
-    close(maker)
-    maker.watcher.stop()

@@ -59,7 +59,11 @@ class Maker(object):
         for runner in six.itervalues(runners):
             runner.schedule(self.executor)
             for dep in runner.task.dependent:
-                self.by_source[os.path.abspath(dep)] = runner.task
+                abs = os.path.abspath(dep)
+                if abs not in self.by_source:
+                    self.by_source[abs] = set([runner.task])
+                else:
+                    self.by_source[abs].add(runner.task)
 
         self.executor.wait()
 
@@ -97,8 +101,7 @@ class Maker(object):
             if obs.type != 'modified':
                 continue
 
-            task = self.by_source.get(os.path.abspath(obs.path))
-            if task:
+            for task in (self.by_source.get(os.path.abspath(obs.path)) or []):
                 log.info('Detected %s: %s', obs.type, obs.path)
                 runner = Runner(task)
                 runner.schedule(self.executor)
