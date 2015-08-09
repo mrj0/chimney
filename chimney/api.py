@@ -20,6 +20,7 @@ class Maker(object):
     """
     STOP_WATCHING = 0
     RELOAD = 1
+    EXIT = 2
 
     def __init__(self, *tasks, **kw):
         """
@@ -50,7 +51,7 @@ class Maker(object):
 
         self.executor.wait()
 
-    def watch(self, reload_patterns=None):
+    def watch(self, reload_patterns=None, restart_patterns=None):
         scheduler = Scheduler().load(self.tasks)
         runners = scheduler.run()
 
@@ -74,9 +75,11 @@ class Maker(object):
 
         try:
             while self.sleep():
-                ret = self.process_changes(reload_patterns)
+                ret = self.process_changes(reload_patterns, restart_patterns)
                 if ret == Maker.RELOAD:
                     return Maker.RELOAD
+                if ret == Maker.EXIT:
+                    raise SystemExit()
         except KeyboardInterrupt:
             pass
         finally:
@@ -84,11 +87,15 @@ class Maker(object):
 
         return Maker.STOP_WATCHING
 
-    def process_changes(self, reload_patterns=None):
+    def process_changes(self, reload_patterns=None, restart_patterns=None):
         batch = self.changes
         self.changes = []
         for obs in set(batch):
             if obs.type in ('created', 'deleted',):
+                for p in restart_patterns or []:
+                    if fnmatch.fnmatch(obs.path, p):
+                        return Maker.EXIT
+
                 if reload_patterns is None:
                     log.info(u'File %s: %s, reloading', obs.type, obs.path)
                     return Maker.RELOAD
@@ -130,12 +137,24 @@ def make(*tasks, **kwargs):
         return maker
 
 
-def watch(func, reload_patterns=None, **kwargs):
+def watch(func, reload_patterns=None, restart_patterns=None, **kwargs):
+    """
+    Compile and watch for changes.
+
+    :param func: A function that generates a list of tasks. This will be called
+     as resources change.
+    :param reload_patterns:list of patterns to rebuild when seen. If not given,
+     the default is to rebuild for any observed change.
+    :param restart_patterns:list of patterns to exit on. This is useful to restart
+     the entire build if the build file itself is changed.
+    :param kwargs: other options for Maker
+    :return:Maker
+    """
     log.info('Start')
 
     while True:
         maker = Maker(*func(), **kwargs)
-        ret = maker.watch(reload_patterns)
+        ret = maker.watch(reload_patterns, restart_patterns)
 
         if ret == Maker.STOP_WATCHING:
             break
