@@ -137,8 +137,13 @@ class Compiler(object):
                 u'\n========================================',
                 file=sys.stderr
             )
+
+            # must reraise or anybody waiting for this will think it was successful
+            raise
         except Exception:
             log.exception('Task failed')
+            # must reraise or anybody waiting for this will think it was successful
+            raise
 
     def run(self):
         raise NotImplementedError()

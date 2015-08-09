@@ -96,6 +96,9 @@ class Runner(object):
             return
 
         if False not in [r.future.done() for r in self.waiting_for]:
+            if any(r.future.exception() for r in self.waiting_for):
+                # a dependency failed. done() is True but an exception is set
+                return
             executor.submit(self)
             return
 

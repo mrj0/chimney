@@ -61,11 +61,13 @@ class DelayedThreadPoolExecutor(_base.Executor):
             t.daemon = True
             t.start()
             self._threads.add(t)
-            _threads_queues[t] = self._work_queue
+            # don't want this cleaned up on interpreter exit
+            # _threads_queues[t] = self._work_queue
 
     def shutdown(self, wait=True):
         with self._shutdown_lock:
             self._shutdown = True
+            self._work_queue.empty()
             self._work_queue.put(None)
         if wait:
             for t in self._threads:
@@ -73,4 +75,9 @@ class DelayedThreadPoolExecutor(_base.Executor):
     shutdown.__doc__ = _base.Executor.shutdown.__doc__
 
     def wait(self):
-        self._work_queue.join()
+        self._work_queue.all_tasks_done.acquire()
+        try:
+            while self._work_queue.unfinished_tasks and not self._shutdown:
+                self._work_queue.all_tasks_done.wait(timeout=1)
+        finally:
+            self._work_queue.all_tasks_done.release()

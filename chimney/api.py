@@ -1,7 +1,6 @@
 import fnmatch
 import multiprocessing
 import os
-from contextlib import closing
 import logging
 import six
 import time
@@ -31,6 +30,7 @@ class Maker(object):
         self.tasks = tasks
         self.directory = kw.pop('directory', None) or os.path.abspath(os.path.curdir)
         self.jobs = int(kw.pop('jobs', multiprocessing.cpu_count() * 1.5))
+        self.watcher = None
         # observed changes
         self.changes = []
 
@@ -132,8 +132,13 @@ class Maker(object):
 def make(*tasks, **kwargs):
     log.info('Start')
 
-    with closing(Maker(*tasks, **kwargs)) as maker:
+    maker = None
+    try:
+        maker = Maker(*tasks, **kwargs)
         maker.execute()
+        maker.close()
+        return maker
+    except KeyboardInterrupt:
         return maker
 
 
@@ -152,11 +157,16 @@ def watch(func, reload_patterns=None, restart_patterns=None, **kwargs):
     """
     log.info('Start')
 
-    while True:
-        maker = Maker(*func(), **kwargs)
-        ret = maker.watch(reload_patterns, restart_patterns)
+    maker = None
+    try:
+        while True:
+            maker = Maker(*func(), **kwargs)
+            ret = maker.watch(reload_patterns, restart_patterns)
 
-        if ret == Maker.STOP_WATCHING:
-            break
+            if ret == Maker.STOP_WATCHING:
+                break
 
-    return maker
+        return maker
+    except KeyboardInterrupt:
+        return maker
+
